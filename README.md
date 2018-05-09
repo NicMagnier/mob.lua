@@ -61,7 +61,7 @@ mob.get(function(a) return a.velocity>100 end)
 
 ## Chains
 
-The result of a query is an object that contain the list of entities. The object also include a selection of functions that can be chained to manipulate even more the list of entities
+The result of a query is an object that contain the list of entities. The object also includes a selection of functions that can be chained to manipulate even more the list of entities
 
 
 ```lua
@@ -73,9 +73,21 @@ for i,particle in mob.get("particles"):pairs() do
 end
 ```
 
-### Call custom function
+### Group manipulation
 
-It is possible to also call in a chain functions that are defined by entities themselves.
+The following functions, manipulate the group of entities and return itself.
+
+`add(), remove(), filter(), copy(), sort(), call()`
+
+### Access entities
+
+The following functions allow you to retrieve specific entities stores in a group
+
+`pairs(), get_first(), get_last(), get_random(), get_smallest(), get_biggest(), get_closest()`
+
+### Entities custom function
+
+It is possible to also call in a chain functions that are defined by entities themselves. Alternatively the function `call()` can also execute a function on each entities of the group.
 
 ```lua
 enemy = {}
