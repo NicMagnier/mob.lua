@@ -379,7 +379,7 @@ function mob._query_split(str, delimiter)
 end
 
 -- get how many element are in the mob
-function mob.size()
+function mob.get_size()
 	return mob.count
 end
 
@@ -595,27 +595,129 @@ function mob_list:call(fn)
 end
 
 -- return the size of the list
-function mob_list:size()
+function mob_list:get_size()
 	if not self then return 0 end
 	return #self.list
 end
 
 -- return the first entity in the list
-function mob_list:first()
+function mob_list:get_first()
 	if not self then return end
 	return self.list[1]
 end
 
 -- return the last entity in the list
-function mob_list:last()
+function mob_list:get_last()
 	if not self then return end
 	return self.list[#self.list]
 end
 
 -- return a random entity in the list
-function mob_list:random()
+function mob_list:get_random()
 	if not self then return end
 	return self.list[math.ceil(love.math.random() * #self.list)]
+end
+
+-- get the entity with the smallest value
+-- argument can be a string of the name of a property or a function that take an entity as a argument and return a value
+function mob_list:get_smallest(prop_or_fn)
+	if not self or not prop_or_fn then return end
+	if #self.list==0 then return end
+
+	-- get function that return a value
+	local get_value_fn
+	if type(prop_or_fn)=="string" then
+		get_value_fn = function(a) return a[prop_or_fn] end
+	elseif type(prop_or_fn)=="function" then
+		get_value_fn = prop_or_fn
+	else
+		return
+	end
+
+	local result = self.list[1]
+	local smallest_value = get_value_fn(result)
+
+	for i = 2, #self.list do
+		local entity = self.list[i]
+		if entity then
+			local val = get_value_fn(entity)
+			if val and val<smallest_value then
+				result = entity
+				smallest_value = val
+			end
+		end
+	end
+
+	return result
+end
+
+-- get the entity with the biggest value
+-- argument can be a string of the name of a property or a function that take an entity as a argument and return a value
+function mob_list:get_biggest(prop_or_fn)
+	if not self or not prop_or_fn then return end
+	if #self.list==0 then return end
+
+	-- get function that return a value
+	local get_value_fn
+	if type(prop_or_fn)=="string" then
+		get_value_fn = function(a) return a[prop_or_fn] end
+	elseif type(prop_or_fn)=="function" then
+		get_value_fn = prop_or_fn
+	else
+		return
+	end
+
+	local result = self.list[1]
+	local biggest_value = get_value_fn(result)
+
+	for i = 2, #self.list do
+		local entity = self.list[i]
+		if entity then
+			local val = get_value_fn(entity)
+			if val and val>biggest_value then
+				result = entity
+				biggest_value = val
+			end
+		end
+	end
+
+	return result
+end
+
+-- get the entity that is the closest from the reference
+-- argument can be a string of the name of a property or a function that take an entity as a argument and return a single value
+-- value is compared with argument "reference"
+function mob_list:get_closest(prop_or_fn, reference)
+	if not self or not prop_or_fn then return end
+	if #self.list==0 then return end
+
+	if not reference then reference = 0 end
+
+	-- get function that return a value
+	local get_value_fn
+	if type(prop_or_fn)=="string" then
+		get_value_fn = function(a) return a[prop_or_fn] end
+	elseif type(prop_or_fn)=="function" then
+		get_value_fn = prop_or_fn
+	else
+		return
+	end
+
+	local result = self.list[1]
+	local diff_value = math.abs(get_value_fn(result)-reference)
+
+	for i = 2, #self.list do
+		local entity = self.list[i]
+		if entity then
+			local val = math.abs(get_value_fn(entity)-reference)
+			if val and val<diff_value then
+				result = entity
+				diff_value = val
+			end
+		end
+	end
+
+	return result
 end
 
 return mob
