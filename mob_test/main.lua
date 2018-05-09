@@ -1,4 +1,4 @@
-mob = require "mob"
+mob = require "libs/mob"
 
 -- NPC --
 npc = {
@@ -26,7 +26,7 @@ function npc:update(dt)
 					local dy = e.y - self.y
 					return (dx*dx+dy*dy)<150*150
 				end)
-			:random()
+			:get_random()
 
 		if interesting_entity then
 			shape = "circle"
@@ -161,13 +161,11 @@ function love.update(dt)
 		return a.mouse_distance < b.mouse_distance
 	end
 
-	local by_distance = function(a,b) return a.mouse_distance < b.mouse_distance end
-
 	-- when the user click, find the closest npc and set is to explode
 	if love.mouse.isDown(1) then
 		mob.get("type_npc")
-			:sort(by_distance)
-			:first():set_state("about_to_explode")
+			:get_smallest("mouse_distance")
+			:set_state("about_to_explode")
 	end
 end
 
