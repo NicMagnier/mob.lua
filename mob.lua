@@ -618,6 +618,13 @@ function mob_list:get_random()
 	return self.list[math.ceil(love.math.random() * #self.list)]
 end
 
+-- return an entitiy at a special index
+-- you shouldn't need this function in theory
+function mob_list:get_index(index)
+	if not self then return end
+	return self.list[index]
+end
+
 -- get the entity with the smallest value
 -- argument can be a string of the name of a property or a function that take an entity as a argument and return a value
 function mob_list:get_smallest(prop_or_fn)
