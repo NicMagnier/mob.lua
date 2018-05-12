@@ -9,9 +9,9 @@
 	* Get group of entities
 	You can query to get a list of entities with get() with a single string "#player @dead item_resurection -level_hell"
 	#<id_name> is an id. An entity has a unique id that cannot be changed.
-	<class_name> is a class. An entity can have multiple classes
+	<flag_name> is a flag. An entity can have multiple flags
 	@<state_name> is a state. An entity has only one state and can be changed
-	-<stuff> means that the query should include the element. "-level_hell" means that the entity shouldn't have the class 'level_hell'. works also for is and state
+	-<stuff> means that the query should include the element. "-level_hell" means that the entity shouldn't have the flag 'level_hell'. works also for is and state
 
 	You can also use a function to get a group of entities where you can filter based on any properties of the entity
 	The function is called for each entity (with the entity as an argument) and should return true if the entity should be in the group
@@ -77,7 +77,7 @@ function mob.register(entity, query)
 	entity.__mob = {}
 	entity.__mob.id = qo.id or get_uid()
 	entity.__mob.state = ""
-	entity.__mob.classes = {}
+	entity.__mob.flags = {}
 
 	-- setup the entity based on the query
 	mob.set(entity, qo)
@@ -95,7 +95,7 @@ function mob.register(entity, query)
 		mt.__mob_registered = true
 
 		-- list of function to install
-		local fn_list = {"delete", "set", "set_state", "add_class", "remove_class", "get_class", "has_class", "has_not_class", "is", "get_id", "get_state", "get_string"}
+		local fn_list = {"delete", "set", "set_state", "add_flag", "remove_flag", "get_flags", "has_flag", "has_not_flag", "is", "get_id", "get_state", "get_string"}
 		for _, fn in pairs(fn_list) do
 			if not mt.__index[fn] then
 				mt.__index[fn] = function(...) return mob[fn](unpack({...})) end
@@ -122,11 +122,11 @@ function mob.delete(entity)
 	entity.__mob = nil
 end
 
--- parse a string (or multiple strings) which can contain #id, class, @state
+-- parse a string (or multiple strings) which can contain #id, flag, @state
 function mob.parse(...)
 	local result = {
-		classes = {},
-		without = {classes={}}
+		flags = {},
+		without = {flags={}}
 	}
 
 	for i,v in ipairs({...}) do
@@ -152,7 +152,7 @@ function mob.parse(...)
 					add_to.state = query:sub(2)
 
 				else
-					table.insert(add_to.classes, query)
+					table.insert(add_to.flags, query)
 				end
 			end
 		end
@@ -161,7 +161,7 @@ function mob.parse(...)
 	return result
 end
 
--- add and remove class and change state with a single query or query object
+-- add and remove flag and change state with a single query or query object
 -- id cannot be set after registration
 function mob.set(entity, query)
 	if not entity or not query then return end
@@ -174,14 +174,14 @@ function mob.set(entity, query)
 	-- set state
 	mob.set_state(entity, query.state)
 
-	-- remove classes
-	for key, class in pairs(query.without.classes) do
-		entity.__mob.classes[class] = nil
+	-- remove flags
+	for key, flag in pairs(query.without.flags) do
+		entity.__mob.flags[flag] = nil
 	end
 
-	-- add classes
-	for key, class in pairs(query.classes) do
-		entity.__mob.classes[class] = true
+	-- add flags
+	for key, flag in pairs(query.flags) do
+		entity.__mob.flags[flag] = true
 	end
 end
 
@@ -191,47 +191,47 @@ function mob.set_state(entity, state)
 	entity.__mob.state = state
 end
 
--- add a list of class to an entity (entities can have multiple classe)
-function mob.add_class(entity, classes)
-	if not entity or not entity.__mob or not classes then return end
+-- add a list of flag to an entity (entities can have multiple flags)
+function mob.add_flag(entity, flags)
+	if not entity or not entity.__mob or not flags then return end
 
-	for key, class in pairs(mob._query_split(classes, ' ')) do
-		entity.__mob.classes[class] = true
+	for key, flag in pairs(mob._query_split(flags, ' ')) do
+		entity.__mob.flags[flag] = true
 	end
 end
 
--- remove a list of class to an entity
-function mob.remove_class(entity, classes)
-	if not entity or not entity.__mob or not classes then return end
+-- remove a list of flag to an entity
+function mob.remove_flag(entity, flags)
+	if not entity or not entity.__mob or not flags then return end
 
-	for key, class in pairs(mob._query_split(classes, ' ')) do
-		entity.__mob.classes[class] = nil
+	for key, flag in pairs(mob._query_split(flags, ' ')) do
+		entity.__mob.flags[flag] = nil
 	end
 end
 
--- get the list of class as a single string
-function mob.get_class(entity)
+-- get the list of flag as a single string
+function mob.get_flags(entity)
 	if not entity or not entity.__mob then return end
 
 	local result = ""
-	for key, value in pairs(entity.__mob.classes) do
+	for key, value in pairs(entity.__mob.flags) do
 		result = result.." "..key
 	end
 
 	return result:sub(2)
 end
 
--- check if the entity has a list of class
-function mob.has_class(entity, query)
+-- check if the entity has a list of flag
+function mob.has_flag(entity, query)
 	if not entity or not entity.__mob then return end
 
 	local qo = mob.parse(query)
-	if #qo.classes==0 then
+	if #qo.flags==0 then
 		return false
 	end
 
-	for i, class in pairs(qo.classes) do
-		if not entity.__mob.classes[class] then
+	for i, flag in pairs(qo.flags) do
+		if not entity.__mob.flags[flag] then
 			return false
 		end
 	end
@@ -239,13 +239,13 @@ function mob.has_class(entity, query)
 	return true
 end
 
--- check if the entity has not a list of class
-function mob.has_not_class(entity, query)
+-- check if the entity has not a list of flag
+function mob.has_not_flag(entity, query)
 	if not entity or not entity.__mob then return end
 
 	local qo = mob.parse(query)
-	for i, class in pairs(qo.classes) do
-		if entity.__mob.classes[class] then
+	for i, flag in pairs(qo.flags) do
+		if entity.__mob.flag[flag] then
 			return false
 		end
 	end
@@ -270,14 +270,14 @@ function mob.is(entity, query)
 	if query.state and query.state~=entity.__mob.state then return false end
 	if query.without.state and query.without.state==entity.__mob.state then return false end
 
-	-- check classes
-	for i, class in pairs(query.classes) do
-		if not entity.__mob.classes[class] then
+	-- check flags
+	for i, flag in pairs(query.flags) do
+		if not entity.__mob.flags[flag] then
 			return false
 		end
 	end
-	for i, class in pairs(query.without.classes) do
-		if entity.__mob.classes[class] then
+	for i, flag in pairs(query.without.flags) do
+		if entity.__mob.flags[flag] then
 			return false
 		end
 	end
@@ -297,17 +297,17 @@ function mob.get_state(entity)
 	return entity.__mob.state
 end
 
--- get in a single screen the id, classes and state of an entity
+-- get in a single screen the id, flags and state of an entity
 function mob.get_string(entity)
 	if not entity or not entity.__mob then return "#UnregisteredObject" end
 
 	local id = mob.get_id(entity)
 	local state = mob.get_state(entity)
-	local classes = mob.get_class(entity)
+	local flags = mob.get_flags(entity)
 
 	local result = "#"..id
 	if state then result = result.." @"..state end
-	if classes then result = result.." "..classes end
+	if flags then result = result.." "..flags end
 
 	return result
 end
