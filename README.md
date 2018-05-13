@@ -28,41 +28,40 @@ mob.get("grunt @dead")
 Every entity added to the mob gets special attributes
 - **id**: Every entity has their own unique id that cannot be changed
 - **state**: An entity can have one state (and only one) that can be change at anytime
-- **classes**: An entity can have multiple classes which can be change
+- **flags**: An entity can have multiple flags which can be change
 
 When an entity is registered, a list of function are automatically added to it to easily change or check attributes:
-`delete(), set(), set_state(), add_class(), remove_class(), get_class(), has_class(), has_not_class(), is(), get_id(), get_state(), get_string()`
+`delete(), set(), set_state(), add_flag(), remove_flag(), get_flags(), has_flag(), has_not_flag(), is(), get_id(), get_state(), get_string()`
 
 ```lua
 empty_entity = {}
 new_entity = mob.new(empty_entity, "class_1 class_2")
-new_entity:remove_class("class_2")
+new_entity:remove_flag("class_2")
 new_entity:get_id()
 ```
 
 ## Query
 
-The library makes it easy to retrieve a list of entities with simply queries. A query is a simple string with properties separated by spaces.
+The library makes it easy to retrieve a pool of entities with simple queries. A query is a string with properties separated by spaces.
 
 ```lua
 mob.get("#player -@dead magic_wand")
 ```
 
 - *#<id_name>* is an id.
-- *<class_name>* is a class.
+- *<flag_name>* is a flag.
 - *@<state_name>* is a state.
-- *-<stuff>* means that the query should not include the element (can be used on class, id or state)
+- *-<stuff>* means that the query should not include the element (can be used on flags, id or state)
 
-A query can also be a custom function that take an entity as its only argument and that return true if the entity id complient. Custom function are useful to do queries on other properties of the entitiy
+A query can also be a custom function that take an entity as its only argument and that return true if the entity is complient. Custom function are useful to do queries on other properties of the entitiy
 
 ```lua
 mob.get(function(a) return a.velocity>100 end)
 ```
 
-## Chains
+## Query result
 
-The result of a query is an object that contain the list of entities. The object also includes a selection of functions that can be chained to manipulate even more the list of entities
-
+The result of a query is an object that contain a pool of entities. The object also includes a selection of functions that can be chained to manipulate even more the pool
 
 ```lua
 -- delete all the bullets that was spawn more than 10 seconds ago
@@ -73,15 +72,15 @@ for i,particle in mob.get("particles"):pairs() do
 end
 ```
 
-### Group manipulation
+### Pool manipulation
 
-The following functions, manipulate the group of entities and return itself.
+The following functions, manipulate the pool of entities and return itself.
 
 `add(), remove(), filter(), copy(), sort(), call()`
 
 ### Access entities
 
-The following functions allow you to retrieve specific entities stores in a group
+The following functions allow you to retrieve specific entities stored in a pool
 
 `pairs(), get_first(), get_last(), get_random(), get_smallest(), get_biggest(), get_closest()`
 
