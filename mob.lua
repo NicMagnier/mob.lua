@@ -7,7 +7,7 @@
 	mob.delete()
 
 	* Get group of entities
-	You can query to get a list of entities with get() with a single string "#player @dead item_resurection -level_hell"
+	You can query to get a pool of entities with get() with a single string "#player @dead item_resurection -level_hell"
 	#<id_name> is an id. An entity has a unique id that cannot be changed.
 	<flag_name> is a flag. An entity can have multiple flags
 	@<state_name> is a state. An entity has only one state and can be changed
@@ -24,14 +24,14 @@
 	mob.get("npc"):check_collision_with_bullets()
 
 
-	* use entity and list of entities only locally
+	* use entity and pool of entities only locally
 	if you need to keep a reference of an entity (for example if an entity need to use another entity)
 	use and save their id instead with get_id() and get the entity with get_entity()
 	This way you avoid risk of referencing an entity that might get removed from the mob.
 	The memory manager can also clean up unused entities as soon as it is removed from the mob
 
 	* TODO
-	Cached list (query is cached, modifying entities update all cached list)
+	Precomputed queries (query is cached, modifying entities update all cached list)
 	Queries with regular expressions
 ]]--
 
@@ -209,7 +209,7 @@ function mob.remove_flag(entity, flags)
 	end
 end
 
--- get the list of flag as a single string
+-- get the flags as a single string
 function mob.get_flags(entity)
 	if not entity or not entity.__mob then return end
 
@@ -312,12 +312,12 @@ function mob.get_string(entity)
 	return result
 end
 
--- query the mob to get a list of entities
+-- query the mob to get a pool of entities
 function mob.get(query_or_fn)
-	-- create an empty mob list
-	local result = mob_list.new()
+	-- create an empty pool
+	local result = mob.new_pool()
 
-	-- of the function is called without arguments we create a list with all entities
+	-- of the function is called without arguments we create a pool with all entities
 	if not query_or_fn then
 		for key, entity in pairs(mob.list) do
 			table.insert(result.list, entity)
@@ -386,24 +386,24 @@ end
 
 
 --------------
--- MOB LIST --
--- Group of entities return by mob_get, can chain functions
+-- POOLS OF ENTITIES --
+-- Group of entities return by mob.get, can chain functions
 --------------
 
--- mob_list object with custom metatable
-mob_list = {
+-- entity_pool object with custom metatable
+mob.entity_pool = {
 	meta = {
 		__index = function(table, key)
-			-- if this is a mob_list function we just send it
-			if mob_list[key] then
-				return mob_list[key]
+			-- if this is a function from the mon.entity_pool object we just send it
+			if mob.entity_pool[key] then
+				return mob.entity_pool[key]
 			end
 
-			-- if the key is not a mob_list function, we call the function for all the entities in the list
+			-- if the key is not a mob.entity_pool function, we call the function for all the entities in the list
 			return function(...)
 				local args = {...}
 
-				-- first argument should be the mob_list object
+				-- first argument should be the mob.entity_pool object
 				-- mob.get():test()
 				local this = args[1]
 
@@ -424,20 +424,20 @@ mob_list = {
 }
 
 -- create a new empty list
-function mob_list.new()
-	local list = {}
-	list.list = {}
+function mob.new_pool()
+	local pool = {}
+	pool.list = {}
 
-	setmetatable(list, mob_list.meta)
+	setmetatable(pool, mob.entity_pool.meta)
 
-	return list
+	return pool
 end
 
--- function to iterate though the list of entities
-function mob_list:pairs()
-	return function(mob_list, index)
+-- function to iterate though the pool of entities
+function mob.entity_pool:pairs()
+	return function(pool, index)
 		index = index + 1
-		entity = mob_list.list[index]
+		entity = pool.list[index]
 		if entity then
 			return index, entity
 		end
@@ -445,18 +445,18 @@ function mob_list:pairs()
 end
 
 
--- add entities to a mob list
--- can be a mob list, function, query, entities of array of entities
-function mob_list:add(a)
+-- add entities to a pool of entities
+-- can be a pool, function, query, entities of array of entities
+function mob.entity_pool:add(a)
 	if not self or not a then return self end
 
 	-- get the new list
 	local entities_to_add
-	if a.mt.__index==mob_list then
+	if a.mt.__index==mob.entity_pool then
 		entities_to_add = a.list
 	elseif type(a)=="string" or type(a)=="function" then
-		local new_list = mob.get(a)
-		entities_to_add = new_list.list
+		local new_pool = mob.get(a)
+		entities_to_add = new_pool.list
 	elseif type(a)=="table" then
 		entities_to_add = a
 	else
@@ -481,19 +481,19 @@ function mob_list:add(a)
 	return self
 end
 
--- remove entities from a mob list
--- can be a mob list, function, query, entities of array of entities
-function mob_list:remove(a)
+-- remove entities from a pool
+-- can be a pool, function, query, entities of array of entities
+function mob.entity_pool:remove(a)
 	if not self or not a then return self end
 
 	-- get the new list
 	local entities_to_remove
 	-- standard query
 	if type(a)=="string" or type(a)=="function" then
-		local new_list = mob.get(a)
-		entities_to_remove = new_list.list
-	-- if it's a mob_list
-	elseif a.mt and a.mt.__index==mob_list then
+		local new_pool = mob.get(a)
+		entities_to_remove = new_pool.list
+	-- if it's a mob.entity_pool
+	elseif a.mt and a.mt.__index==mob.entity_pool then
 		entities_to_remove = a.list
 	-- or just a list of entities
 	elseif type(a)=="table" then
@@ -502,7 +502,7 @@ function mob_list:remove(a)
 		entities_to_remove = {a}
 	end
 
-	-- remove from the list the entities
+	-- remove from the entities from the pool
 	for i, entity_to_remove in pairs(entities_to_remove) do
 		local is_new = true
 		for j, entity in pairs(self.list) do
@@ -518,7 +518,7 @@ end
 
 
 -- keep only entities that comply with the query
-function mob_list:filter(query_or_fn)
+function mob.entity_pool:filter(query_or_fn)
 	if not self or not query_or_fn then return self end
 
 	-- get function that check an entity
@@ -536,7 +536,7 @@ function mob_list:filter(query_or_fn)
 		end
 	end
 
-	-- filter the list, remove entities that doesn't comply with the query
+	-- filter the pool, remove entities that doesn't comply with the query
 	for index=#self.list, 1, -1 do
 		if not check_fn(self.list[index]) then
 			table.remove(self.list, index)
@@ -546,8 +546,8 @@ function mob_list:filter(query_or_fn)
 	return self
 end
 
--- delete all elements in the list from the game
-function mob_list:delete()
+-- delete all elements in the pool from the game
+function mob.entity_pool:delete()
 	if not self then return end
 
 	for i, entity in pairs(self.list) do
@@ -559,13 +559,13 @@ function mob_list:delete()
 	return self
 end
 
--- create a new list with the exact same list of element
--- useful to filter a list, while keeping the original list intact
--- local cache_list = mob.get("npc")
--- cache_list:copy():filter("@idle"):update()
--- cache_list:copy():remove("alive"):delete()
-function mob_list:copy()
-	local copy = mob_list.new()
+-- create a new pool with the exact same list of entities
+-- useful to filter a pool, while keeping the original one intact
+-- local cache_pool = mob.get("npc")
+-- cache_pool:copy():filter("@idle"):update()
+-- cache_pool:copy():remove("alive"):delete()
+function mob.entity_pool:copy()
+	local copy = mob.new_pool()
 	if not self then return copy end
 
 	for i=1, #self.list do
@@ -575,17 +575,17 @@ function mob_list:copy()
 	return copy
 end
 
--- sort the list of entities based on a function (argument fn)
+-- sort the pool of entities based on a function (argument fn)
 -- the argument function has 2 arguments, and return true if the first entity has to come before the second
-function mob_list:sort(fn)
+function mob.entity_pool:sort(fn)
 	if not self then return self end
 	table.sort(self.list, fn)
 	return self
 end
 
--- call a function on each entities of the list
+-- call a function on each entities in the pool
 -- the argument function as 1 argument, the entity
-function mob_list:call(fn)
+function mob.entity_pool:call(fn)
 	if not self or not fn then return self end
 	for i, entity in pairs(self.list) do
 		fn(entity)
@@ -594,40 +594,40 @@ function mob_list:call(fn)
 	return self
 end
 
--- return the size of the list
-function mob_list:get_size()
+-- return the size of the pool
+function mob.entity_pool:get_size()
 	if not self then return 0 end
 	return #self.list
 end
 
--- return the first entity in the list
-function mob_list:get_first()
+-- return the first entity in the pool
+function mob.entity_pool:get_first()
 	if not self then return end
 	return self.list[1]
 end
 
--- return the last entity in the list
-function mob_list:get_last()
+-- return the last entity in the pool
+function mob.entity_pool:get_last()
 	if not self then return end
 	return self.list[#self.list]
 end
 
--- return a random entity in the list
-function mob_list:get_random()
+-- return a random entity in the pool
+function mob.entity_pool:get_random()
 	if not self then return end
 	return self.list[math.ceil(love.math.random() * #self.list)]
 end
 
 -- return an entitiy at a special index
 -- you shouldn't need this function in theory
-function mob_list:get_index(index)
+function mob.entity_pool:get_index(index)
 	if not self then return end
 	return self.list[index]
 end
 
 -- get the entity with the smallest value
 -- argument can be a string of the name of a property or a function that take an entity as a argument and return a value
-function mob_list:get_smallest(prop_or_fn)
+function mob.entity_pool:get_smallest(prop_or_fn)
 	if not self or not prop_or_fn then return end
 	if #self.list==0 then return end
 
@@ -660,7 +660,7 @@ end
 
 -- get the entity with the biggest value
 -- argument can be a string of the name of a property or a function that take an entity as a argument and return a value
-function mob_list:get_biggest(prop_or_fn)
+function mob.entity_pool:get_biggest(prop_or_fn)
 	if not self or not prop_or_fn then return end
 	if #self.list==0 then return end
 
@@ -694,7 +694,7 @@ end
 -- get the entity that is the closest from the reference
 -- argument can be a string of the name of a property or a function that take an entity as a argument and return a single value
 -- value is compared with argument "reference"
-function mob_list:get_closest(prop_or_fn, reference)
+function mob.entity_pool:get_closest(prop_or_fn, reference)
 	if not self or not prop_or_fn then return end
 	if #self.list==0 then return end
 
